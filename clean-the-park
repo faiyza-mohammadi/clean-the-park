@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clean the Park! 🌳🗑️</title>
+  <style>
+    /* تنظیمات کلی صفحه */
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #6ee7b7, #3b82f6, #9333ea);
+      font-family: Arial, sans-serif;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 2.5em;
+    }
+
+    /* استایل سطل */
+    #bin {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-size: 3em;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 15px;
+      transition: transform 0.3s ease;
+    }
+
+    /* وقتی زباله داخل سطل افتاد */
+    #bin.active {
+      transform: scale(1.3);
+    }
+
+    /* استایل زباله‌ها */
+    .trash {
+      position: absolute;
+      font-size: 2em;
+      cursor: pointer;
+      transition: transform 0.3s ease, left 0.5s ease, top 0.5s ease;
+      user-select: none;
+    }
+
+    /* نمایش پیام‌ها */
+    #message {
+      margin-top: 15px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    /* نمایش سطح بازی */
+    #level {
+      margin-top: 5px;
+      font-size: 1.1em;
+    }
+
+    /* پنجه گربه */
+    #cat-paw {
+      position: absolute;
+      font-size: 3em;
+      display: none;
+      pointer-events: none;
+      z-index: 1000;
+      transition: left 0.5s ease, top 0.5s ease, opacity 0.5s ease;
+    }
+  </style>
+</head>
+<body>
+  <!-- تیتر بازی -->
+  <h1>Clean the Park! 🌳🗑️</h1>
+
+  <!-- سطل آشغال -->
+  <div id="bin">🗑️</div>
+
+  <!-- جای پیام‌ها -->
+  <div id="message"></div>
+
+  <!-- نمایش سطح -->
+  <div id="level"></div>
+
+  <!-- پنجه گربه -->
+  <div id="cat-paw">🐾</div>
+
+  <script>
+    // =======================
+    // متغیرهای اصلی
+    // =======================
+    let level = 1;
+    let trashCount = 3;
+    let recycled = 0;
+
+    const trashTypes = ["🍌","🍕","💩","🥑","🤡"];
+    const bin = document.getElementById("bin");
+    const message = document.getElementById("message");
+    const levelDisplay = document.getElementById("level");
+    const catPaw = document.getElementById("cat-paw");
+
+    // =======================
+    // صداها
+    // =======================
+    const catchSound = new Audio("catch.mp3");
+    const bgMusic = new Audio("bg-music.mp3");
+    bgMusic.loop = true;
+    bgMusic.volume = 0.5;
+
+    // شروع موسیقی با اولین کلیک
+    document.addEventListener("click", () => {
+      if (bgMusic.paused) {
+        bgMusic.play().catch(err => console.log("Autoplay blocked:", err));
+      }
+    });
+
+    function playCatchSound() {
+      catchSound.currentTime = 0;
+      catchSound.play();
+    }
+
+    // =======================
+    // ایجاد زباله‌ها
+    // =======================
+    function createTrash(num) {
+      for (let i = 0; i < num; i++) {
+        const trash = document.createElement("div");
+        trash.classList.add("trash");
+        trash.textContent = trashTypes[Math.floor(Math.random() * trashTypes.length)];
+
+        // موقعیت تصادفی
+        trash.style.left = Math.random() * (window.innerWidth - 50) + "px";
+        trash.style.top = Math.random() * (window.innerHeight - 150) + "px";
+
+        // اندازه تصادفی (هر چی سطح بالاتر → کوچیک‌تر)
+        let size = Math.max(1.5, 3 - level * 0.2);
+        trash.style.fontSize = size + "em";
+
+        // امکان درگ
+        trash.draggable = true;
+
+        // رویداد شروع درگ
+        trash.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", "trash");
+          e.dataTransfer.effectAllowed = "move";
+          trash.classList.add("dragging");
+        });
+
+        // رویداد پایان درگ
+        trash.addEventListener("dragend", () => {
+          trash.classList.remove("dragging");
+        });
+
+        document.body.appendChild(trash);
+      }
+    }
+
+    // =======================
+    // سطل آشغال (Drag & Drop)
+// =======================
+    bin.addEventListener("dragover", e => {
+      e.preventDefault();
+    });
+
+    bin.addEventListener("drop", e => {
+      e.preventDefault();
+      const dragging = document.querySelector(".dragging");
+      if (dragging) {
+        dragging.remove(); // حذف زباله
+        recycled++;
+
+        // صدا
+        playCatchSound();
+
+        // انیمیشن سطل
+        bin.classList.add("active");
+        setTimeout(() => bin.classList.remove("active"), 300);
+
+        // پیام
+        message.textContent = "زباله جمع شد! 🧹";
+
+        // بررسی اتمام مرحله
+        if (recycled >= trashCount) {
+          level++;
+          recycled = 0;
+          trashCount += 2;
+          message.textContent = "مرحله بالا رفت! 🌟";
+          updateLevel();
+          setTimeout(() => createTrash(trashCount), 1000);
+        }
+      }
+    });
+
+    // =======================
+    // بروزرسانی سطح
+    // =======================
+    function updateLevel() {
+      levelDisplay.textContent = "مرحله: " + level;
+    }
+
+    // =======================
+    // منطق فرار کردن زباله‌ها
+    // =======================
+    document.addEventListener("mousemove", e => {
+      const trashes = document.querySelectorAll(".trash");
+      trashes.forEach(trash => {
+        const rect = trash.getBoundingClientRect();
+        const trashX = rect.left + rect.width / 2;
+        const trashY = rect.top + rect.height / 2;
+
+        const dx = e.clientX - trashX;
+        const dy = e.clientY - trashY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 100) {
+          // حرکت به سمت مخالف ماوس
+          let offsetX = -dx / distance * 50;
+          let offsetY = -dy / distance * 50;
+
+          // جلوگیری از خروج کامل
+          let newLeft = trash.offsetLeft + offsetX;
+          let newTop = trash.offsetTop + offsetY;
+
+          newLeft = Math.max(0, Math.min(window.innerWidth - rect.width, newLeft));
+          newTop = Math.max(0, Math.min(window.innerHeight - rect.height - 50, newTop));
+
+          trash.style.left = newLeft + "px";
+          trash.style.top = newTop + "px";
+
+          // wiggle
+          trash.style.transform = "rotate(" + (Math.random() * 20 - 10) + "deg)";
+          setTimeout(() => {
+            trash.style.transform = "rotate(0deg)";
+          }, 200);
+        }
+      });
+    });
+
+    // =======================
+    // شلوغی تصادفی (پنجه گربه 🐾)
+    // =======================
+    function randomChaos() {
+      catPaw.style.display = "block";
+      catPaw.style.opacity = 1;
+
+      // مکان تصادفی
+      const pawX = Math.random() * (window.innerWidth - 100);
+      const pawY = Math.random() * (window.innerHeight - 100);
+      catPaw.style.left = pawX + "px";
+      catPaw.style.top = pawY + "px";
+
+      // زباله‌ها جابه‌جا بشن
+      const trashes = document.querySelectorAll(".trash");
+      trashes.forEach(trash => {
+        const offsetX = Math.random() * 100 - 50;
+        const offsetY = Math.random() * 100 - 50;
+        let newLeft = trash.offsetLeft + offsetX;
+        let newTop = trash.offsetTop + offsetY;
+
+        newLeft = Math.max(0, Math.min(window.innerWidth - 50, newLeft));
+        newTop = Math.max(0, Math.min(window.innerHeight - 100, newTop));
+
+        trash.style.left = newLeft + "px";
+        trash.style.top = newTop + "px";
+      });
+
+      // محو شدن
+      setTimeout(() => {
+        catPaw.style.opacity = 0;
+        setTimeout(() => {
+          catPaw.style.display = "none";
+        }, 500);
+      }, 1500);
+    }
+
+    setInterval(randomChaos, 10000);
+
+    // =======================
+    // شروع بازی
+    // =======================
+    updateLevel();
+    message.textContent = "زباله‌ها را به سطل بینداز!";
+    createTrash(trashCount);
+  </script>
+</body>
+</html>
